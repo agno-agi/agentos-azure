@@ -6,7 +6,7 @@ AgentOS is a high-performance runtime that gives you one agent server for every 
 2. **Chat interfaces.** Chat with your agents through Slack, WhatsApp, Telegram, Discord. Slack is set up; for the rest, see [interfaces](https://docs.agno.com/agent-os/interfaces/overview).
 3. **AI apps.** Let Claude, ChatGPT, Cursor, and Claude Code use your AgentOS through the MCP server at `/mcp`.
 4. **Coding agents.** Claude Code, Codex, and Cursor drive the full agent development lifecycle with the skills in [`.agents/skills/`](.agents/skills/).
-5. **AgentOS UI.** The control plane for your agent-platform at [os.agno.com](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-railway&utm_content=agentos-railway&utm_term=railway). Chat with agents, inspect sessions, traces, memory, and evals.
+5. **AgentOS UI.** The control plane for your agent-platform at [os.agno.com](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-azure&utm_content=agentos-azure&utm_term=azure). Chat with agents, inspect sessions, traces, memory, and evals.
 
 <img width="3298" height="2412" alt="AgentOS" src="https://github.com/user-attachments/assets/40a53a42-d4d2-402b-8e92-742609207957" />
 
@@ -28,7 +28,7 @@ The fastest way to get started is using a coding agent. Copy the prompt below in
 ```text
 Help me set up an AgentOS on this machine. Work step by step and verify each step before moving to the next. When a step needs me (an API key, a Docker install, a sign-in), stop, tell me exactly what to do, and wait for my input. Never read or print secrets.
 
-1. Clone https://github.com/agno-agi/agentos-railway.git and cd in. Then read AGENTS.md end to end — it is the source of truth for how this platform works and answers most questions you'll hit along the way.
+1. Clone https://github.com/agno-agi/agentos-azure.git and cd in. Then read AGENTS.md end to end — it is the source of truth for how this platform works and answers most questions you'll hit along the way.
 2. Run `cp example.env .env`, open .env in my favorite editor, and ask me to set the OPENAI_API_KEY.
 3. Confirm docker is installed, running and `docker info` succeeds. If Docker is missing, ask me to install Docker Desktop and wait until it's running.
 4. Start the platform with `docker compose up -d --build`, then poll http://localhost:8000/docs until it returns 200 (first build takes a few minutes). If it never comes up, read `docker compose logs agentos-api` and fix what you find.
@@ -36,7 +36,7 @@ Help me set up an AgentOS on this machine. Work step by step and verify each ste
 6. Ask me which frontends I want connected, then set up the ones I pick:
    - Coding agents (including you): run `uvx agno connect` — it registers http://localhost:8000/mcp in Claude Code, Claude Desktop, Codex, and Cursor, and verifies with a real handshake. Use the default user scope, not --project (that would write a token into the repo).
    - The AgentOS web UI: walk me through os.agno.com → Connect OS → http://localhost:8000, named "Local AgentOS".
-   - Claude and ChatGPT apps (web or desktop): their sessions run in the cloud and can't reach localhost, so work with me on deploying to production first using ./scripts/railway/up.sh (needs the Railway CLI, logged in; the script pauses while I mint a JWT key at os.agno.com). Then I add https://<railway-domain>/mcp as a custom connector in the chat app's connector settings.
+   - Claude and ChatGPT apps (web or desktop): their sessions run in the cloud and can't reach localhost, so work with me on deploying to production first using ./scripts/azure/up.sh (needs the Azure CLI, logged in, and Docker; the script pauses while I mint a JWT key at os.agno.com). Then I add https://<container-app-domain>/mcp as a custom connector in the chat app's connector settings.
 7. Finish with a short summary of what's running and where, plus a few first prompts to try — start with asking Agent Builder to "Build an agent that tracks AI news and writes a daily brief".
 ```
 
@@ -47,7 +47,7 @@ Help me set up an AgentOS on this machine. Work step by step and verify each ste
 > **Prerequisite:** [Docker](https://www.docker.com/get-started/) installed and running.
 
 ```sh
-git clone https://github.com/agno-agi/agentos-railway.git agentos
+git clone https://github.com/agno-agi/agentos-azure.git agentos
 cd agentos
 
 # Configure credentials
@@ -62,7 +62,7 @@ Confirm your AgentOS is running at [http://localhost:8000/docs](http://localhost
 
 ### Step 2: Connect the AgentOS UI
 
-1. Open [os.agno.com](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-railway&utm_content=agentos-railway&utm_term=railway) and sign in.
+1. Open [os.agno.com](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-azure&utm_content=agentos-azure&utm_term=azure) and sign in.
 2. Click **Connect OS**, enter `http://localhost:8000` as the URL, name it **Local AgentOS**, and connect.
 
 ### Step 3: Build your first agent
@@ -87,13 +87,13 @@ uvx agno connect
 
 It auto-detects Claude Code, Claude Desktop, Codex, and Cursor, registers `http://localhost:8000/mcp`, and verifies the connection. Coding agents run on your machine, which is why `localhost` works for them. Hosted chat apps (like Claude and ChatGPT) need a deployed URL. The manual command for Claude Code is `claude mcp add --transport http agentos http://localhost:8000/mcp`; other MCP-capable tools use the same URL.
 
-**Chat apps.** The Claude and ChatGPT apps can't reach `localhost` because their sessions run in hosted environments, not on your machine. For them, we need to deploy first, then add our platform as a connector. In claude.ai: **Settings → Connectors → Add custom connector** → `https://<your-railway-domain>/mcp`. Same URL in ChatGPT's connector settings. Follow the [Run in production](#run-in-production) section to get set up.
+**Chat apps.** The Claude and ChatGPT apps can't reach `localhost` because their sessions run in hosted environments, not on your machine. For them, we need to deploy first, then add our platform as a connector. In claude.ai: **Settings → Connectors → Add custom connector** → `https://<your-agentos-domain>/mcp`. Same URL in ChatGPT's connector settings. Follow the [Run in production](#run-in-production) section to get set up.
 
 ## Run in production
 
-You can run the platform anywhere that supports containerized images. For the lightest lift, the codebase comes with scripts to deploy the platform to [Railway](https://railway.com).
+You can run the platform anywhere that supports containerized images. This sibling deploys to [Azure Container Apps](https://azure.microsoft.com/products/container-apps) with a single script — Postgres Flexible Server on a private VNet, secrets in Container Apps, always-on single replica.
 
-> **Prerequisite:** [Railway CLI](https://docs.railway.com/cli#installing-the-cli) installed and `railway login` completed.
+> **Prerequisites:** [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) installed and `az login` completed; Docker running (the image is built locally).
 
 ### 1. Set up your production env
 
@@ -109,10 +109,10 @@ Keeping a separate `.env.production` lets us use different values for local and 
 ### 2. Deploy
 
 ```sh
-./scripts/railway/up.sh
+./scripts/azure/up.sh
 ```
 
-This provisions Postgres and the app service on the same private network. The script pauses and asks for a JWT verification key for authentication (see next section).
+First run takes ~15-20 minutes (Postgres Flexible Server is the long pole) and creates everything inside one dedicated resource group (default `agentos`): VNet with delegated subnets, private DNS, container registry (+ locally-built image push), PostgreSQL 17 Flexible Server private-access-only with pgvector allowlisted, the Container Apps environment, and the `agent-os` app at 2 vCPU / 4 GiB pinned to exactly one replica — the in-process scheduler must not run twice. The app URL is only known after create, so the script sets `AGENTOS_URL` in a second revision, then pauses for a JWT verification key (see next section).
 
 ### 3. Production Auth
 
@@ -124,9 +124,9 @@ Token-Based Auth gives you three things:
 2. **Per-request identity.** Middleware parses the token and extracts the `user_id`, `session_id`, and custom claims. Each request is tied to a user and session, giving you auditability and traceability.
 3. **Granular permissions.** User tokens can run an agent and view their own sessions. Admin tokens read everyone's sessions and test any agent.
 
-During `./scripts/railway/up.sh`, the script creates your Railway domain and pauses so you can mint the key before the app starts.
+During `./scripts/azure/up.sh`, once the app URL exists the script pauses so you can mint the key.
 
-1. Open [os.agno.com](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-railway&utm_content=agentos-railway&utm_term=railway), click **Connect OS** → **Live**, enter your Railway domain, and connect.
+1. Open [os.agno.com](https://os.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-azure&utm_content=agentos-azure&utm_term=azure), click **Connect OS** → **Live**, enter your Container Apps URL, and connect.
 2. Name it **Live AgentOS**.
 3. Go to **Settings** → **OS & Security**.
 4. Turn **Token-Based Authorization (JWT)** on.
@@ -143,51 +143,45 @@ The value is quoted so every parser — docker compose `env_file` included — r
 
 > **Heads up.** Live AgentOS Connections are a paid feature. Use `PLATFORM30` to get 1 month off. We are working on a free trial so you don't have to pay to try.
 
-If you run non-interactively or skip the prompt, you can sync environment variables later with `./scripts/railway/env-sync.sh`.
+If you run non-interactively or skip the prompt, you can sync environment variables later with `./scripts/azure/env-sync.sh`.
 
 ### 4. Verify
 
-You can check the logs on the Railway dashboard, or by running the following command:
+The script prints the app URL — open `/docs` on it, or tail the logs:
 
 ```sh
-railway logs --service agent-os
+az containerapp logs show -g agentos -n agent-os --follow
 ```
 
 ### 5. Redeploy after code changes
 
-For one-off updates from your machine, run the following command:
-
 ```sh
-./scripts/railway/redeploy.sh
+./scripts/azure/redeploy.sh
 ```
 
-Recommended: Auto-deploy on merge to `main` using:
-
-1. Open the Railway dashboard, your project, the agent-os service, **Settings**.
-2. Under **Source**, click **Connect Repo** and pick your repo.
-3. Set the deploy branch to `main` and save.
-
-Push to `main` triggers a build and rolling deploy. `./scripts/railway/env-sync.sh` is still how you sync env changes.
+Rebuilds the image locally, pushes it to the registry, and rolls the app with a fresh revision suffix.
 
 ### 6. Sync environment variables
 
 To re-sync environment variables, run the following command:
 
 ```sh
-./scripts/railway/env-sync.sh
+./scripts/azure/env-sync.sh
 ```
+
+Secret-shaped keys become Container Apps secrets; everything else becomes plain env vars. One revision roll applies it all.
 
 ### 7. Tear down
 
 ```sh
-./scripts/railway/down.sh
+./scripts/azure/down.sh
 ```
 
-Deletes the Railway project — the agent-os service, the pgvector database, and its volume, **including all data**. It also drops the dead Railway domain from your env file so a future `up.sh` starts clean.
+Deletes the **entire resource group** — app, environment, Postgres (all data), registry, network. up.sh creates a dedicated group precisely so teardown is this complete; the script lists the group's resources before asking for confirmation.
 
 ### Opting out of JWT (not recommended)
 
-Set `authorization=False` in [`app/main.py`](app/main.py) and redeploy. Use this only inside a private VPC behind another auth layer. Without it, anyone who guesses your Railway domain can access your platform.
+Set `authorization=False` in [`app/main.py`](app/main.py) and redeploy. Use this only inside a private VPC behind another auth layer. Without it, anyone who reaches your AgentOS URL can access your platform.
 
 ## Using the platform
 
@@ -234,10 +228,10 @@ Because the repo is managed by coding agents, it moves fast. Run `/review-and-im
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | yes | none | OpenAI key for models and embeddings. |
-| `RUNTIME_ENV` | no | `prd` | `dev` disables JWT. Compose sets this to `dev` for local — never put it in an env file that syncs to Railway, or production deploys unauthenticated. |
+| `RUNTIME_ENV` | no | `prd` | `dev` disables JWT. Compose sets this to `dev` for local — never put `dev` in an env file that env-sync.sh pushes to Azure, or production serves unauthenticated. |
 | `JWT_VERIFICATION_KEY` | prd | none | Public key from os.agno.com. Required when `RUNTIME_ENV=prd`, unless `JWT_JWKS_FILE` is set. |
 | `JWT_JWKS_FILE` | prd | none | Path to a JWKS file; alternative to `JWT_VERIFICATION_KEY` for production JWT verification. |
-| `AGENTOS_URL` | no | `http://127.0.0.1:8000` | Scheduler base URL. `scripts/railway/up.sh` auto-sets it to your Railway domain; set by hand only for a custom domain or tunnel. |
+| `AGENTOS_URL` | no | `http://127.0.0.1:8000` | Scheduler base URL. `scripts/azure/up.sh` sets it to the Container Apps URL right after the first deploy (a second revision — the FQDN is only known post-create) and writes it back into your env file. |
 | `ENABLE_DEPLOY_CHECK` | no | `True` | The reference deployment-check cron runs daily by default. Set `False` to disable; the workflow is runnable on demand regardless. |
 | `ENABLE_SCHEDULED_EVALS` | no | `False` | If `True`, schedules the run-evals workflow daily. Off by default because it uses model calls. |
 | `EVALS_TAG` | no | `smoke` | Eval tag run by the run-evals workflow. |
@@ -252,6 +246,6 @@ Because the repo is managed by coding agents, it moves fast. Run `/review-and-im
 
 ## Learn more
 
-- [Agno documentation](https://docs.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-railway&utm_content=agentos-railway&utm_term=railway)
-- [AgentOS introduction](https://docs.agno.com/agent-os/introduction?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-railway&utm_content=agentos-railway&utm_term=railway)
+- [Agno documentation](https://docs.agno.com?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-azure&utm_content=agentos-azure&utm_term=azure)
+- [AgentOS introduction](https://docs.agno.com/agent-os/introduction?utm_source=github&utm_medium=example-repo&utm_campaign=agentos-azure&utm_content=agentos-azure&utm_term=azure)
 - [Agno on GitHub](https://github.com/agno-agi/agno). Drop a star if this is useful.
