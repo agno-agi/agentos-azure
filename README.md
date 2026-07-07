@@ -91,7 +91,7 @@ It auto-detects Claude Code, Claude Desktop, Codex, and Cursor, registers `http:
 
 ## Run in production
 
-You can run the platform anywhere that supports containerized images. This sibling deploys to [Azure Container Apps](https://azure.microsoft.com/products/container-apps) with a single script — Postgres Flexible Server on a private VNet, secrets in Container Apps, always-on single replica.
+You can run the platform anywhere that supports containerized images. This template deploys to [Azure Container Apps](https://azure.microsoft.com/products/container-apps) with a single script — Postgres Flexible Server on a private VNet, secrets in Container Apps, always-on single replica.
 
 > **Prerequisites:** [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) installed and `az login` completed; Docker running (the image is built locally).
 
