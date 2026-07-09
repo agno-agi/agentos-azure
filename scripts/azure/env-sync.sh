@@ -10,10 +10,11 @@
 #
 #    Reads the env file and pushes every variable to the agent-os
 #    container app: secret-shaped keys (OPENAI_API_KEY, DB_PASS,
-#    JWT_VERIFICATION_KEY, PARALLEL_API_KEY, SLACK_*) become Container
-#    Apps secrets with secretref env vars; everything else becomes a plain
-#    env var. One revision roll at the end applies it all. Multi-line
-#    values (PEM-formatted JWT_VERIFICATION_KEY) are handled correctly.
+#    JWT_VERIFICATION_KEY, MCP_CONNECT_SECRET, AGENTOS_MCP_SIGNING_KEY,
+#    PARALLEL_API_KEY, SLACK_*) become Container Apps secrets with
+#    secretref env vars; everything else becomes a plain env var. One
+#    revision roll at the end applies it all. Multi-line values
+#    (PEM-formatted JWT_VERIFICATION_KEY) are handled correctly.
 #
 #    Skipped keys: AZURE_* (provisioning config, not app env) and DB_HOST/
 #    DB_PORT/DB_USER/DB_DATABASE when absent (up.sh wired them already).
@@ -25,6 +26,7 @@
 set -e
 
 # Colors
+ORANGE='\033[38;5;208m'
 DIM='\033[2m'
 BOLD='\033[1m'
 NC='\033[0m'
@@ -56,13 +58,15 @@ secret_name_for() {
 
 is_secret_key() {
     case "$1" in
-        OPENAI_API_KEY|DB_PASS|JWT_VERIFICATION_KEY|PARALLEL_API_KEY|SLACK_BOT_TOKEN|SLACK_SIGNING_SECRET) return 0 ;;
+        OPENAI_API_KEY|DB_PASS|JWT_VERIFICATION_KEY|MCP_CONNECT_SECRET|AGENTOS_MCP_SIGNING_KEY|PARALLEL_API_KEY|SLACK_BOT_TOKEN|SLACK_SIGNING_SECRET) return 0 ;;
         *) return 1 ;;
     esac
 }
 
 echo ""
-echo -e "${BOLD}Syncing env vars from ${ENV_FILE} to ${APP_NAME} (resource group ${RESOURCE_GROUP})...${NC}"
+echo -e "${ORANGE}▸${NC} ${BOLD}Syncing env vars${NC}"
+echo ""
+echo -e "${DIM}> ${ENV_FILE} -> container app ${APP_NAME} (resource group ${RESOURCE_GROUP})${NC}"
 echo ""
 
 SECRET_ARGS=()

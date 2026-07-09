@@ -18,6 +18,7 @@
 set -e
 
 # Colors
+ORANGE='\033[38;5;208m'
 DIM='\033[2m'
 BOLD='\033[1m'
 NC='\033[0m'
@@ -56,13 +57,17 @@ fi
 IMAGE="${AZURE_ACR_NAME}.azurecr.io/agentos:latest"
 
 echo ""
-echo -e "${BOLD}Building + pushing ${IMAGE}...${NC}"
+echo -e "${ORANGE}▸${NC} ${BOLD}Building + pushing image${NC}"
+echo ""
+echo -e "${DIM}> docker build --platform linux/amd64 -t ${IMAGE} . && docker push ${IMAGE}${NC}"
 az acr login --name "$AZURE_ACR_NAME"
 docker build --platform linux/amd64 -t "$IMAGE" .
 docker push "$IMAGE"
 
 echo ""
-echo -e "${BOLD}Rolling ${APP_NAME}...${NC}"
+echo -e "${ORANGE}▸${NC} ${BOLD}Rolling ${APP_NAME}${NC}"
+echo ""
+echo -e "${DIM}> az containerapp update -g ${RESOURCE_GROUP} -n ${APP_NAME} --image ${IMAGE}${NC}"
 # Same tag ⇒ force a new revision so the platform re-pulls the image.
 az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" \
     --image "$IMAGE" --revision-suffix "r$(date +%s)" --output none
