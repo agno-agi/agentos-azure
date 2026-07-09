@@ -21,6 +21,7 @@
 set -e
 
 # Colors
+ORANGE='\033[38;5;208m'
 DIM='\033[2m'
 BOLD='\033[1m'
 RED='\033[31m'
@@ -44,7 +45,9 @@ if [[ "$(az group exists --name "$RESOURCE_GROUP")" != "true" ]]; then
 fi
 
 echo ""
-echo -e "${BOLD}This deletes resource group ${RESOURCE_GROUP} (subscription ${SUBSCRIPTION}) and EVERYTHING in it:${NC}"
+echo -e "${ORANGE}▸${NC} ${BOLD}Azure Teardown${NC}"
+echo ""
+echo -e "This deletes resource group ${RESOURCE_GROUP} (subscription ${SUBSCRIPTION}) and EVERYTHING in it:"
 az resource list --resource-group "$RESOURCE_GROUP" --query '[].{name:name, type:type}' -o table
 echo -e "  ${RED}including the Postgres server — all data deleted${NC}"
 echo ""
@@ -59,14 +62,14 @@ if [[ "$1" != "--yes" ]]; then
 fi
 
 echo ""
-echo -e "${BOLD}Deleting ${RESOURCE_GROUP} (takes several minutes)...${NC}"
+echo -e "${DIM}> az group delete --name ${RESOURCE_GROUP} --yes  (takes several minutes)${NC}"
 az group delete --name "$RESOURCE_GROUP" --yes --output none
 
 # `az group delete` blocks until done, but verify rather than trust the
 # exit code — a token expiry mid-delete would otherwise read as success.
 if [[ "$(az group exists --name "$RESOURCE_GROUP")" == "true" ]]; then
     echo ""
-    echo -e "${BOLD}Teardown incomplete${NC} — the group still exists. Check:"
+    echo -e "${RED}${BOLD}Teardown incomplete${NC} — the group still exists. Check:"
     echo -e "${DIM}  az group show --name ${RESOURCE_GROUP}${NC}"
     exit 1
 fi
