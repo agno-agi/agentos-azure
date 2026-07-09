@@ -116,7 +116,7 @@ Keeping a separate `.env.production` lets us use different values for local and 
 ./scripts/azure/up.sh
 ```
 
-First run takes ~15-20 minutes (Postgres Flexible Server is the long pole) and creates everything inside one dedicated resource group (default `agentos`): VNet with delegated subnets, private DNS, container registry (+ locally-built image push), PostgreSQL 17 Flexible Server private-access-only with pgvector allowlisted, the Container Apps environment, and the `agent-os` app at 2 vCPU / 4 GiB pinned to exactly one replica — the in-process scheduler must not run twice. The app URL is only known after create, so the script sets `AGENTOS_URL` in a second revision, then pauses for a JWT verification key (see next section).
+First run takes ~15-20 minutes (Postgres Flexible Server is the long pole) and creates everything inside one dedicated resource group (default `agentos`): VNet with delegated subnets, private DNS, container registry (+ locally-built image push), PostgreSQL 17 Flexible Server private-access-only with pgvector allowlisted, the Container Apps environment, and the `agent-os` app at 2 vCPU / 4 GiB pinned to exactly one replica — the in-process scheduler must not run twice. The app URL is only known after create, so the script pauses for a JWT verification key (see next section), then rolls a second revision that sets `AGENTOS_URL` and carries the JWT key once minted.
 
 ### 3. Production Auth
 

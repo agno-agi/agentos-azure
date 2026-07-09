@@ -360,6 +360,7 @@ if [[ -n "$AUTH_REQUIRES_JWT" && -z "$JWT_VERIFICATION_KEY" && -z "$JWT_JWKS_FIL
             echo -e "${DIM}  Saved JWT_VERIFICATION_KEY to ${ENV_FILE}${NC}"
         else
             echo -e "${BOLD}Warning:${NC} couldn't parse the pasted JWT_VERIFICATION_KEY."
+            echo -e "${DIM}  Save it to ${ENV_FILE:-.env.production} and run ./scripts/azure/env-sync.sh if auth is still missing.${NC}"
         fi
     fi
     [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]] && load_env_file "$ENV_FILE"
@@ -382,10 +383,12 @@ if [[ -n "$JWT_VERIFICATION_KEY" ]]; then
     az containerapp secret set --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" \
         --secrets jwt-verification-key="$JWT_VERIFICATION_KEY" --output none
     REV2_ENVS+=("JWT_VERIFICATION_KEY=secretref:jwt-verification-key")
+elif [[ -n "$JWT_JWKS_FILE" ]]; then
+    REV2_ENVS+=("JWT_JWKS_FILE=${JWT_JWKS_FILE}")
 elif [[ -n "$AUTH_REQUIRES_JWT" ]]; then
     echo ""
     echo -e "${DIM}Deployed without JWT auth config — the app will refuse traffic until${NC}"
-    echo -e "${DIM}you add JWT_VERIFICATION_KEY to ${ENV_FILE:-.env.production} and run ./scripts/azure/env-sync.sh.${NC}"
+    echo -e "${DIM}you add JWT_VERIFICATION_KEY or JWT_JWKS_FILE to ${ENV_FILE:-.env.production} and run ./scripts/azure/env-sync.sh.${NC}"
 fi
 if [[ -n "$MCP_CONNECT_SECRET" ]]; then
     az containerapp secret set --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" \

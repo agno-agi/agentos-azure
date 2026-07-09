@@ -74,6 +74,16 @@ if [[ "$(az group exists --name "$RESOURCE_GROUP")" == "true" ]]; then
     exit 1
 fi
 
+# An Azure-minted Container Apps domain dies with the resource group. Comment
+# it out of the env file(s) so a future up.sh derives the fresh domain instead
+# of pinning the dead one; custom domains are left alone.
+for f in .env.production .env; do
+    if [[ -f "$f" ]] && grep -qE '^AGENTOS_URL=.*\.azurecontainerapps\.io/?$' "$f"; then
+        sed -i.bak -E 's|^(AGENTOS_URL=.*\.azurecontainerapps\.io/?)$|# \1|' "$f" && rm -f "$f.bak"
+        echo -e "${DIM}Commented out the stale AGENTOS_URL in ${f}${NC}"
+    fi
+done
+
 echo ""
 echo -e "${BOLD}Done.${NC} Resource group confirmed gone. Verify anytime with: az group list -o table"
 echo ""
