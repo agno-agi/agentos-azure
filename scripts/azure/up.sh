@@ -387,7 +387,7 @@ elif [[ -n "$JWT_JWKS_FILE" ]]; then
     REV2_ENVS+=("JWT_JWKS_FILE=${JWT_JWKS_FILE}")
 elif [[ -n "$AUTH_REQUIRES_JWT" ]]; then
     echo ""
-    echo -e "${DIM}Deployed without JWT auth config — the app will refuse traffic until${NC}"
+    echo -e "${DIM}Deploying without JWT auth config — the container exits on boot and the Container Apps revision never activates until${NC}"
     echo -e "${DIM}you add JWT_VERIFICATION_KEY or JWT_JWKS_FILE to ${ENV_FILE:-.env.production} and run ./scripts/azure/env-sync.sh.${NC}"
 fi
 if [[ -n "$MCP_CONNECT_SECRET" ]]; then
