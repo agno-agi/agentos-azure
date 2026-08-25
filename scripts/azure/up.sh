@@ -187,11 +187,35 @@ if [[ -z "$SUBSCRIPTION" ]]; then
     exit 1
 fi
 
+REQUIRED_PROVIDERS=(
+    Microsoft.Network
+    Microsoft.ContainerRegistry
+    Microsoft.DBforPostgreSQL
+    Microsoft.App
+    Microsoft.OperationalInsights
+)
+for provider in "${REQUIRED_PROVIDERS[@]}"; do
+    state="$(az provider show --namespace "$provider" --query registrationState -o tsv 2> /dev/null || true)"
+    if [[ "$state" != "Registered" ]]; then
+        echo "Registering Azure resource provider ${provider}..."
+        az provider register --namespace "$provider" --wait --output none
+    fi
+done
+
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-agentos}"
 LOCATION="${AZURE_LOCATION:-eastus}"
 APP_NAME="agent-os"
 ENV_NAME="agentos-env"
 VNET_NAME="agentos-vnet"
+
+POSTGRES_OFFER_RESTRICTED="$(az postgres flexible-server list-skus --location "$LOCATION" \
+    --query "[0].supportedFeatures[?name=='OfferRestricted'].status | [0]" \
+    -o tsv 2> /dev/null || true)"
+if [[ "$POSTGRES_OFFER_RESTRICTED" == "Enabled" ]]; then
+    echo "PostgreSQL Flexible Server provisioning is restricted in ${LOCATION} for this subscription."
+    echo "Choose an allowed region with AZURE_LOCATION before running this script."
+    exit 1
+fi
 
 echo ""
 echo -e "${BOLD}Deploying to subscription: ${SUBSCRIPTION}${NC}  ${DIM}(resource group ${RESOURCE_GROUP}, ${LOCATION})${NC}"
@@ -227,7 +251,9 @@ fi
 
 echo ""
 echo -e "${ORANGE}▸${NC} ${BOLD}Creating resource group${NC}"
-az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output none
+if [[ "$(az group exists --name "$RESOURCE_GROUP")" != "true" ]]; then
+    az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output none
+fi
 
 echo ""
 echo -e "${ORANGE}▸${NC} ${BOLD}Creating network (VNet + delegated subnets + private DNS)${NC}"
@@ -235,25 +261,41 @@ echo -e "${ORANGE}▸${NC} ${BOLD}Creating network (VNet + delegated subnets + p
 # types); Flexible Server private access needs a subnet delegated to
 # Microsoft.DBforPostgreSQL/flexibleServers and a private DNS zone — the
 # CLI does not create any of these on its own.
-az network vnet create --resource-group "$RESOURCE_GROUP" --name "$VNET_NAME" \
-    --address-prefixes 10.0.0.0/16 --output none
-az network vnet subnet create --resource-group "$RESOURCE_GROUP" --vnet-name "$VNET_NAME" \
-    --name aca-infra --address-prefixes 10.0.0.0/23 \
-    --delegations Microsoft.App/environments --output none
-az network vnet subnet create --resource-group "$RESOURCE_GROUP" --vnet-name "$VNET_NAME" \
-    --name db --address-prefixes 10.0.2.0/24 \
-    --delegations Microsoft.DBforPostgreSQL/flexibleServers --output none
+if ! az network vnet show --resource-group "$RESOURCE_GROUP" --name "$VNET_NAME" &> /dev/null; then
+    az network vnet create --resource-group "$RESOURCE_GROUP" --name "$VNET_NAME" \
+        --address-prefixes 10.0.0.0/16 --output none
+fi
+if ! az network vnet subnet show --resource-group "$RESOURCE_GROUP" \
+    --vnet-name "$VNET_NAME" --name aca-infra &> /dev/null; then
+    az network vnet subnet create --resource-group "$RESOURCE_GROUP" --vnet-name "$VNET_NAME" \
+        --name aca-infra --address-prefixes 10.0.0.0/23 \
+        --delegations Microsoft.App/environments --output none
+fi
+if ! az network vnet subnet show --resource-group "$RESOURCE_GROUP" \
+    --vnet-name "$VNET_NAME" --name db &> /dev/null; then
+    az network vnet subnet create --resource-group "$RESOURCE_GROUP" --vnet-name "$VNET_NAME" \
+        --name db --address-prefixes 10.0.2.0/24 \
+        --delegations Microsoft.DBforPostgreSQL/flexibleServers --output none
+fi
 DNS_ZONE="agentos.private.postgres.database.azure.com"
-az network private-dns zone create --resource-group "$RESOURCE_GROUP" \
-    --name "$DNS_ZONE" --output none
-az network private-dns link vnet create --resource-group "$RESOURCE_GROUP" \
-    --zone-name "$DNS_ZONE" --name agentos-dns-link \
-    --virtual-network "$VNET_NAME" --registration-enabled false --output none
+if ! az network private-dns zone show --resource-group "$RESOURCE_GROUP" \
+    --name "$DNS_ZONE" &> /dev/null; then
+    az network private-dns zone create --resource-group "$RESOURCE_GROUP" \
+        --name "$DNS_ZONE" --output none
+fi
+if ! az network private-dns link vnet show --resource-group "$RESOURCE_GROUP" \
+    --zone-name "$DNS_ZONE" --name agentos-dns-link &> /dev/null; then
+    az network private-dns link vnet create --resource-group "$RESOURCE_GROUP" \
+        --zone-name "$DNS_ZONE" --name agentos-dns-link \
+        --virtual-network "$VNET_NAME" --registration-enabled false --output none
+fi
 
 echo ""
 echo -e "${ORANGE}▸${NC} ${BOLD}Creating container registry + pushing image${NC}"
-az acr create --resource-group "$RESOURCE_GROUP" --name "$AZURE_ACR_NAME" \
-    --sku Basic --admin-enabled true --output none
+if ! az acr show --resource-group "$RESOURCE_GROUP" --name "$AZURE_ACR_NAME" &> /dev/null; then
+    az acr create --resource-group "$RESOURCE_GROUP" --name "$AZURE_ACR_NAME" \
+        --sku Basic --admin-enabled true --output none
+fi
 az acr login --name "$AZURE_ACR_NAME"
 IMAGE="${AZURE_ACR_NAME}.azurecr.io/agentos:latest"
 docker build --platform linux/amd64 -t "$IMAGE" .
@@ -269,11 +311,15 @@ if ! az postgres flexible-server show --resource-group "$RESOURCE_GROUP" \
         --name "$AZURE_PG_NAME" --location "$LOCATION" \
         --version 17 --tier Burstable --sku-name Standard_B1ms --storage-size 32 \
         --admin-user "${DB_USER:-ai}" --admin-password "$DB_PASS" \
-        --database-name "${DB_DATABASE:-ai}" \
         --subnet "$DB_SUBNET_ID" --private-dns-zone "$DNS_ZONE" \
         --yes --output none
 else
     echo -e "${DIM}Server ${AZURE_PG_NAME} already exists — reusing (password NOT rotated)${NC}"
+fi
+if ! az postgres flexible-server db show --resource-group "$RESOURCE_GROUP" \
+    --server-name "$AZURE_PG_NAME" --name "${DB_DATABASE:-ai}" &> /dev/null; then
+    az postgres flexible-server db create --resource-group "$RESOURCE_GROUP" \
+        --server-name "$AZURE_PG_NAME" --name "${DB_DATABASE:-ai}" --output none
 fi
 # pgvector must be allowlisted before CREATE EXTENSION works.
 az postgres flexible-server parameter set --resource-group "$RESOURCE_GROUP" \
@@ -317,15 +363,19 @@ if [[ -n "$SLACK_BOT_TOKEN" && -n "$SLACK_SIGNING_SECRET" ]]; then
     ENV_ARGS+=("SLACK_BOT_TOKEN=secretref:slack-bot-token" "SLACK_SIGNING_SECRET=secretref:slack-signing-secret")
 fi
 
-az containerapp create --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" \
-    --environment "$ENV_NAME" --image "$IMAGE" \
-    --registry-server "${AZURE_ACR_NAME}.azurecr.io" \
-    --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
-    --cpu 2 --memory 4Gi --min-replicas 1 --max-replicas 1 \
-    --ingress external --target-port 8000 \
-    --secrets "${SECRET_ARGS[@]}" \
-    --env-vars "${ENV_ARGS[@]}" \
-    --output none
+if ! az containerapp show --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" &> /dev/null; then
+    az containerapp create --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" \
+        --environment "$ENV_NAME" --image "$IMAGE" \
+        --registry-server "${AZURE_ACR_NAME}.azurecr.io" \
+        --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
+        --cpu 2 --memory 4Gi --min-replicas 1 --max-replicas 1 \
+        --ingress external --target-port 8000 \
+        --secrets "${SECRET_ARGS[@]}" \
+        --env-vars "${ENV_ARGS[@]}" \
+        --output none
+else
+    echo -e "${DIM}Container app ${APP_NAME} already exists — reusing${NC}"
+fi
 
 APP_URL="https://$(az containerapp show --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" \
     --query properties.configuration.ingress.fqdn -o tsv)"
