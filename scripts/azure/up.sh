@@ -12,7 +12,8 @@
 #    Prerequisites:
 #      - Azure CLI (az) installed and `az login` completed
 #      - Docker running (image is built locally, linux/amd64)
-#      - OPENAI_API_KEY set in environment (or .env / .env.production)
+#      - OPENAI_API_KEY set in environment (or .env / .env.production);
+#        ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN there too for Claude Engineer
 #
 #    Provisions, in the resource group (default `agentos`, one group per
 #    deployment — down.sh deletes the whole group):
@@ -177,10 +178,12 @@ if ! command -v docker &> /dev/null || ! docker info &> /dev/null; then
     echo "Docker is required (the image is built locally). Start Docker and retry."
     exit 1
 fi
-if [[ -z "$OPENAI_API_KEY" ]]; then
+if [[ -z "$OPENAI_API_KEY" || "$OPENAI_API_KEY" == "sk-***" ]]; then
     echo "OPENAI_API_KEY not set. Add to .env (or .env.production) or export it."
     exit 1
 fi
+# example.env ships the Claude key as a placeholder; never deploy it as a value.
+[[ "$ANTHROPIC_API_KEY" == "sk-***" ]] && ANTHROPIC_API_KEY=""
 SUBSCRIPTION="$(az account show --query name -o tsv 2> /dev/null || true)"
 if [[ -z "$SUBSCRIPTION" ]]; then
     echo "Not logged in to Azure. Run: az login"
@@ -315,6 +318,15 @@ fi
 if [[ -n "$SLACK_BOT_TOKEN" && -n "$SLACK_SIGNING_SECRET" ]]; then
     SECRET_ARGS+=(slack-bot-token="$SLACK_BOT_TOKEN" slack-signing-secret="$SLACK_SIGNING_SECRET")
     ENV_ARGS+=("SLACK_BOT_TOKEN=secretref:slack-bot-token" "SLACK_SIGNING_SECRET=secretref:slack-signing-secret")
+fi
+# Claude Engineer authenticates with one of these two; Codex uses OPENAI_API_KEY.
+if [[ -n "$ANTHROPIC_API_KEY" ]]; then
+    SECRET_ARGS+=(anthropic-api-key="$ANTHROPIC_API_KEY")
+    ENV_ARGS+=("ANTHROPIC_API_KEY=secretref:anthropic-api-key")
+fi
+if [[ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
+    SECRET_ARGS+=(claude-code-oauth-token="$CLAUDE_CODE_OAUTH_TOKEN")
+    ENV_ARGS+=("CLAUDE_CODE_OAUTH_TOKEN=secretref:claude-code-oauth-token")
 fi
 
 az containerapp create --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" \

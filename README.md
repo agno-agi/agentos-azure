@@ -188,8 +188,10 @@ You'll need Azure CLI with `az login` completed, Docker, and OpenSSL.
 [ -f .env.production ] || cp example.env .env.production
 ```
 
-Add `OPENAI_API_KEY` and any other model keys you use. Keep `RUNTIME_ENV=prd`
-or leave it unset. The scripts read `.env.production` before `.env`.
+Add `OPENAI_API_KEY` and any other model keys you use, such as `ANTHROPIC_API_KEY`
+or `CLAUDE_CODE_OAUTH_TOKEN` for Claude Engineer. Keep `RUNTIME_ENV=prd` or leave
+it unset. The scripts read `.env.production` before `.env`; credential-shaped keys
+land in Container Apps secrets, the rest become plain environment variables.
 
 Set `AZURE_RESOURCE_GROUP` and `AZURE_LOCATION` to choose the group and region. The defaults are `agentos` and `eastus`.
 
@@ -249,10 +251,11 @@ Deletes the entire resource group, including its database and every resource in 
 ### Sandbox storage
 
 Local Docker sandbox instructions are in the [sandbox guide](docs/sandboxes.md).
-The production deployment does not provision sandbox checkpoint storage.
-Before enabling AWS AgentCore, configure persistent storage mounted at `/data`
-on the API service and give it AWS access. If your deployment cannot provide
-that mount, leave AgentCore disabled. Keep one API instance.
+The production deployment does not attach sandbox checkpoint storage. Before
+enabling AWS AgentCore, add an Azure Files share as a storage definition on the
+Container Apps environment and mount it at `/data` in the app's template, and put
+the AWS credentials AgentCore needs in `.env.production` so the sync stores them
+as secrets. If you skip the mount, leave AgentCore disabled. Keep one API instance.
 
 ## Verify and develop
 
