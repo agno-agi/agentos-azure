@@ -201,6 +201,31 @@ skipped the prompt, save the quoted `JWT_VERIFICATION_KEY` there and run
 `./scripts/azure/env-sync.sh` to finish. Production requires a valid token
 to access agents and data.
 
+### Azure resources and capacity
+
+A fresh deployment creates **7 top-level resources in one resource group**, plus
+two subnets and a private DNS link. These are template defaults, not measured usage
+or a live inventory of your subscription.
+
+| Resource | Count | Default capacity / purpose |
+| --- | --- | --- |
+| Container App | 1 | AgentOS API; **2 vCPU, 4 GiB RAM**, exactly **1 always-on replica**. |
+| Container Apps environment | 1 | Hosts the app and connects it to the VNet. |
+| PostgreSQL Flexible Server | 1 | **PostgreSQL 18**, Burstable `Standard_B1ms`: **1 vCore, 2 GiB RAM, 32 GiB storage**; 7-day backups, no HA standby. |
+| Container Registry | 1 | Basic tier; stores the built Docker images. |
+| Virtual network | 1 | Separate delegated subnets for the app environment and database. |
+| Private DNS zone | 1 | Resolves the private database hostname; linked to the VNet. |
+| Log Analytics workspace | 1 | Stores application and environment logs. |
+
+**App + database allocation:** 3 virtual CPUs, 6 GiB RAM, and 32 GiB database
+storage, excluding image storage, logs, backups, and managed-service overhead.
+B1ms is burstable; see [Azure compute specifications](https://learn.microsoft.com/en-us/azure/postgresql/compute-storage/concepts-compute).
+These resources incur Azure charges while provisioned; model API usage is separate.
+
+Regional resources use `AZURE_LOCATION`; private DNS appears as **Global** in the
+portal. The API has no attached persistent disk. PostgreSQL stores application data.
+Follow [scaling guidance](docs/scaling.md) before increasing the replica count.
+
 ### 3. Check the deployment
 
 Open `/health` and `/docs` on your public URL, then connect through the AgentOS UI.

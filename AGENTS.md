@@ -30,6 +30,7 @@ workflows in `.agents/skills/`; `.claude/skills` links to that directory.
 | Harden an agent with simulations and targeted fixes | [improve](.agents/skills/improve/SKILL.md) |
 | Review repository consistency and public readiness | [review-and-improve](.agents/skills/review-and-improve/SKILL.md) |
 | Deploy or change production configuration | [deploy-platform](.agents/skills/deploy-platform/SKILL.md) |
+| Diagnose a failed or unhealthy Azure deployment | [debug-deploy](.agents/skills/debug-deploy/SKILL.md) |
 
 ## Where changes belong
 

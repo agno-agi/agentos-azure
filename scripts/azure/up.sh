@@ -18,7 +18,7 @@
 #    Provisions, in the resource group (default `agentos`, one group per
 #    deployment — down.sh deletes the whole group):
 #      VNet + delegated subnets → private DNS zone → ACR (+ local image
-#      push) → PostgreSQL Flexible Server 17 (private access, pgvector
+#      push) → PostgreSQL Flexible Server 18 (private access, pgvector
 #      allowlisted) → Container Apps environment → the agent-os app at
 #      2 vCPU / 4 Gi, min = max = 1 replica (the in-process scheduler must
 #      not run twice). The app URL is only known after create, so a second
@@ -270,7 +270,7 @@ if ! az postgres flexible-server show --resource-group "$RESOURCE_GROUP" \
     --name "$AZURE_PG_NAME" &> /dev/null; then
     az postgres flexible-server create --resource-group "$RESOURCE_GROUP" \
         --name "$AZURE_PG_NAME" --location "$LOCATION" \
-        --version 17 --tier Burstable --sku-name Standard_B1ms --storage-size 32 \
+        --version 18 --tier Burstable --sku-name Standard_B1ms --storage-size 32 \
         --admin-user "${DB_USER:-ai}" --admin-password "$DB_PASS" \
         --database-name "${DB_DATABASE:-ai}" \
         --subnet "$DB_SUBNET_ID" --private-dns-zone "$DNS_ZONE" \
