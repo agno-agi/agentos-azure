@@ -302,6 +302,7 @@ ACR_PASS="$(az acr credential show --name "$AZURE_ACR_NAME" --query 'passwords[0
 # Secret-shaped values ride Container Apps secrets; env vars reference them.
 SECRET_ARGS=(openai-api-key="$OPENAI_API_KEY" db-pass="$DB_PASS")
 ENV_ARGS=(
+    "SANDBOX_PROVIDER=agentcore"
     "RUNTIME_ENV=${RUNTIME_ENV:-prd}"
     "WAIT_FOR_DB=True"
     "DB_HOST=${DB_FQDN}"
