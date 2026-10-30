@@ -148,10 +148,10 @@ if [[ "${#SECRET_ARGS[@]}" -gt 0 ]]; then
     az containerapp secret set --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" \
         --secrets "${SECRET_ARGS[@]}" --output none
 fi
-# Secret updates alone don't roll the running revision; the env-var update
-# below creates a new revision that picks everything up.
+# Secret values can change while their environment references stay the same.
+# Force a new revision so containers reload the updated secrets.
 az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" \
-    --set-env-vars "${ENV_ARGS[@]}" --output none
+    --set-env-vars "${ENV_ARGS[@]}" --revision-suffix "env$(date +%s)" --output none
 
 echo ""
 echo -e "${BOLD}Done.${NC} Synced ${count} variable(s); a new revision is rolling out."
