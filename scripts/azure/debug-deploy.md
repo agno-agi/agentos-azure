@@ -1,8 +1,3 @@
----
-name: debug-deploy
-description: Diagnose and recover a failed or unhealthy Azure deployment of this AgentOS — provider registration, region restrictions, PostgreSQL create errors, partial reruns, stale secrets, JWT startup failures, and unhealthy revisions. Use when ./scripts/azure/up.sh, redeploy.sh, env-sync.sh or down.sh fails, or the deployed app does not come up.
----
-
 # Debug an Azure Deployment
 
 Read `scripts/azure/` and the README deployment section first. Find the failing
@@ -37,7 +32,7 @@ scripts, or they act on the default `agentos` group.
 | PostgreSQL create fails with "location is restricted" or a quota/offer error | The subscription cannot create Flexible Servers in that region | Check `az postgres flexible-server list-skus --location <region> --query "[0].supportedFeatures[?name=='OfferRestricted'].status" -o tsv`. If `Enabled`, choose another region. A resource group's region cannot change: use a new `AZURE_RESOURCE_GROUP` with the new `AZURE_LOCATION`, or remove the old group with the user's approval. |
 | `--version 18` rejected | Old Azure CLI or region without PostgreSQL 18 | Run `az upgrade`, confirm `az postgres flexible-server create -h` lists 18, and check the region's supported versions. |
 | PostgreSQL create fails in `getPrivateDnsZoneSuffix` | Azure CLI bug when the private DNS zone already exists | Upgrade the CLI and retry. If it persists, create the server through ARM with explicit IDs: write the request body to a temp file (keep `DB_PASS` out of command arguments, delete the file afterwards) with `version: "18"`, `Standard_B1ms`/`Burstable`, 32 GB storage, `publicNetworkAccess: Disabled`, the `db` subnet ID, and the zone ID from `az network private-dns zone show`, then `az resource create --resource-type Microsoft.DBforPostgreSQL/flexibleServers --is-full-object --properties @<file>`. Create the `ai` database and rerun `up.sh`. |
-| Rerun fails on a resource that already exists (VNet, subnet, DNS zone/link, ACR, Container App) | `up.sh` creates those without checking first | Do not delete anything to get past it. List what exists, then either finish the remaining steps manually with the same names, or, with approval, run `down.sh` and deploy fresh. Keep `AZURE_ACR_NAME`, `AZURE_PG_NAME`, and `DB_PASS` in the env file for the same deployment. |
+| Rerun fails on a resource that already exists (VNet, subnet, DNS zone/link, ACR, Container App) | An older script or a resource still changing state | Do not delete anything to get past it. List what exists, then rerun the current `up.sh` once resources settle; it reuses existing resources. Investigate permission or network errors before treating resources as absent. Keep `AZURE_ACR_NAME`, `AZURE_PG_NAME`, and `DB_PASS` in the env file for the same deployment. |
 | `az group create` fails with "already exists in location" | `AZURE_LOCATION` changed after the group was created | Use the group's original region or a new group name. |
 | Existing server stays on PostgreSQL 17 | `up.sh` reuses an existing server as-is | Expected. A major-version upgrade is a separate, approved operation with a backup plan. |
 | Secret changed, app still uses the old value | Updating a secret does not roll the running revision when env references are unchanged | `az containerapp revision restart -g <group> -n agent-os --revision <latest>` or `az containerapp update -g <group> -n agent-os --revision-suffix env$(date +%s)`. |
@@ -59,5 +54,5 @@ errors usually mean wrong `DB_*` values or a server still provisioning; a missin
 ## 4. Report
 
 State the root cause, what you changed, and what is still unverified. Then hand
-back to [deploy-platform](../deploy-platform/SKILL.md) for verification: `/health`
+back to [deploy-platform](../../.agents/skills/deploy-platform/SKILL.md) for verification: `/health`
 succeeds, unauthenticated `/agents` is rejected, and the UI connects.

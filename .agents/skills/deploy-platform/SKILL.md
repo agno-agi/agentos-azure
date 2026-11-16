@@ -89,3 +89,5 @@ updates, settings, logs, and teardown. For browser MCP, use `<AGENTOS_URL>/mcp` 
 tell the user to enter `MCP_CONNECT_SECRET` from the production settings into the
 consent page; do not print it. For coding clients, use
 `uvx agno connect --url <AGENTOS_URL>`.
+
+For failed deployments, follow the [Azure troubleshooting guide](../../../scripts/azure/debug-deploy.md).
