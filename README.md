@@ -132,6 +132,8 @@ When setup provides the HTTPS URL, connect it as a **Live** connection at
 and supply the public verification key. If the prompt was skipped, save the full quoted
 multiline `JWT_VERIFICATION_KEY` in `.env.production`, then run
 `./scripts/azure/env-sync.sh`. The API requires the key to start in production.
+Under authorization, Slack members get the `slack-member` role in `app/interfaces.py`,
+and os.agno.com sign-ins keep their token scopes.
 
 Use `./scripts/azure/redeploy.sh` for code and `./scripts/azure/env-sync.sh` for settings.
 
